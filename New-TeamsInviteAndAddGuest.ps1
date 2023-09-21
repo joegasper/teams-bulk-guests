@@ -12,7 +12,7 @@
 
    # Add Sally Simon (sally@contoso.io) to a team.
 .EXAMPLE
-   $users = Import-Excel -Path .\NewGuests.xlsx (will have "Email" and "DisplayName" as row headers).
+   $users = Import-Csv -Path .\NewGuests.csv ( "Email" and "DisplayName" as column headers).
    $api = 'https://teams.microsoft.com/api/mt/amer/beta/teams/19:a57f1cb8...@thread.skype/a76e2.../inviteAndAddGuest'
    $bearer = 'Bearer eyJ7tX9IYOb...'
    $skype = 'eyJhbG2FP5h...'
