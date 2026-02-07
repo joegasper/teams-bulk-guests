@@ -7,7 +7,8 @@
     from a CSV file.
 
     Each API call returns a result object with the guest's email, display name,
-    status (Success or Failed), the API response, and any error details.
+    status (Success, Failed, or Skipped), the API response, and any error details.
+    Items are marked Skipped when using -WhatIf or declining -Confirm.
 .NOTES
     You will need your browser's developer tools (DevTools) to obtain the API URL
     and Bearer token. See the project README for step-by-step instructions.
@@ -101,6 +102,15 @@ function New-TeamsInviteAndAddGuest {
                     Response    = $_.ErrorDetails.Message
                     Error       = $_.Exception.Message
                 }
+            }
+        }
+        else {
+            [PSCustomObject]@{
+                Email       = $Email
+                DisplayName = $DisplayName
+                Status      = 'Skipped'
+                Response    = $null
+                Error       = $null
             }
         }
     }

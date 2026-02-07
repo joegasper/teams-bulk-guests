@@ -68,6 +68,6 @@ Each call returns an object with the following properties:
 |-------------|---------------------------------------------------|
 | Email       | Email address of the guest                        |
 | DisplayName | Display name for the guest                        |
-| Status      | `Success` or `Failed`                             |
+| Status      | `Success`, `Failed`, or `Skipped`                 |
 | Response    | API response data (or error response if failed)   |
 | Error       | Error message if the call failed, otherwise null  |
