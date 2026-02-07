@@ -1,107 +1,107 @@
-﻿<#
-.Synopsis
-   Send an invite and add a guest to a team.
+<#
+.SYNOPSIS
+    Invite and add a guest to a Microsoft Teams team.
 .DESCRIPTION
-   Function will generate a standard Teams guest invite and add the guest account to the team.
+    Sends a standard Teams guest invitation and adds the guest account to a team
+    using the inviteAndAddGuest API. Supports pipeline input for bulk operations
+    from a CSV file.
+
+    Each API call returns a result object with the guest's email, display name,
+    status (Success or Failed), the API response, and any error details.
 .NOTES
-   Until someone more experienced works on this, you will need to be familiar with your browser's developer tools to use this function.
-   In DevTools, you will extract three values: Request URL (API URL) and Authorization (Bearer token).
-   You can derive the two GUIDs in the Request URL from a link to the General channel, but I found different tenants used different base URLs.
+    You will need your browser's developer tools (DevTools) to obtain the API URL
+    and Bearer token. See the project README for step-by-step instructions.
 .EXAMPLE
-   New-TeamsInviteAndAddGuest -Email 'sally@contoso.io' -DisplayName 'Sally Simon' -ApiUrl 'https://...' -BearerToken 'Bearer ej8if7hs...'
+    New-TeamsInviteAndAddGuest -Email 'sally@contoso.io' -DisplayName 'Sally Simon' -ApiUrl $api -BearerToken $bearer
 
-   # Add Sally Simon (sally@contoso.io) to a team.
+    Add a single guest to a team.
 .EXAMPLE
-   $users = Import-Csv -Path .\NewGuests.csv ( "Email" and "DisplayName" as column headers).
-   $api = 'https://teams.microsoft.com/api/mt/amer/beta/teams/19:a57f1cb8...@thread.skype/a76e2.../inviteAndAddGuest'
-   $bearer = 'Bearer eyJ7tX9IYOb...'
-   foreach ($user in $users) {
-      New-TeamsInviteAndAddGuest -Email $user.Email -DisplayName $user.DisplayName -ApiUrl $api -BearerToken $bearer
-   }
+    $results = Import-Csv -Path .\NewGuests.csv | New-TeamsInviteAndAddGuest -ApiUrl $api -BearerToken $bearer
 
-   # Add an Excel file of new guests to a team.
+    Bulk add guests from a CSV file with "Email" and "DisplayName" columns.
+    Results are captured in $results for review.
+.EXAMPLE
+    $results = Import-Csv -Path .\NewGuests.csv | New-TeamsInviteAndAddGuest -ApiUrl $api -BearerToken $bearer
+    $results | Where-Object Status -eq 'Failed'
+    $results | Export-Csv -Path .\Results.csv -NoTypeInformation
+
+    Bulk add guests, review failures, and export all results to CSV.
 .PARAMETER Email
-   Authentication email address.
+    Email address of the guest to invite.
 .PARAMETER DisplayName
-   Name to display for the guest.
+    Display name for the guest account.
 .PARAMETER ApiUrl
-   URL to the Teams inviteAndAddGuest API for the specific team (from browser DevTools).
+    URL to the Teams inviteAndAddGuest API for the specific team.
+    Obtain this from the Request URL in browser DevTools.
 .PARAMETER BearerToken
-   Bearer authentication token (from browser DevTools).
-.PARAMETER Delay
-   Delay in milliseconds between API calls.
+    Authorization Bearer token from browser DevTools.
+    The "Bearer " prefix is stripped automatically if included.
+.INPUTS
+    System.Management.Automation.PSObject
+        Objects with Email and DisplayName properties (e.g., from Import-Csv).
+.OUTPUTS
+    System.Management.Automation.PSCustomObject
+        Objects with Email, DisplayName, Status, Response, and Error properties.
 #>
 function New-TeamsInviteAndAddGuest {
-   [CmdletBinding(SupportsShouldProcess = $true,
-      PositionalBinding = $false,
-      ConfirmImpact = 'Medium')]
-   [Alias()]
-   [OutputType([String])]
-   Param
-   (
-      # UPN account login for the user
-      [Parameter(Position = 0, Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-      [ValidateNotNullOrEmpty()]
-      [String[]]
-      $Email,
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory, Position = 0, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Email,
 
-      # Display name for the account
-      [Parameter(Position = 1, Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-      [ValidateNotNullOrEmpty()]
-      [String[]]
-      $DisplayName,
+        [Parameter(Mandatory, Position = 1, ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
+        [string]$DisplayName,
 
-      # URL link to the API
-      [Parameter(Position = 2, Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-      [ValidateNotNullOrEmpty()]
-      [string]
-      $ApiUrl,
+        [Parameter(Mandatory, Position = 2)]
+        [ValidateNotNullOrEmpty()]
+        [string]$ApiUrl,
 
-      # Authorization Bearer token (from browser devtools)
-      [Parameter(Position = 3, Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-      [ValidateNotNullOrEmpty()]
-      [string]
-      $BearerToken,
+        [Parameter(Mandatory, Position = 3)]
+        [ValidateNotNullOrEmpty()]
+        [string]$BearerToken
+    )
 
-      # Delay each API call by a number of milliseconds.
-      [Parameter(Position = 5, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-      [ValidateRange(1, 10000)]
-      [int]
-      $Delay
-   )
-
-   Begin {
-      $BearerToken = $BearerToken -replace 'Bearer ', ''
-      $ContentType = 'application/json'
-      $Headers = @{
-         'authorization' = "Bearer $BearerToken"
-      }
-   }
-   Process {
-      if ($pscmdlet.ShouldProcess("$DisplayName <$Email>", 'Invite and Add Guest')) {
-
-         $Payload = @"
-{"emailAddress":"$Email","displayName":"$DisplayName","userType":"Guest"}
-"@
-         $Body = $Payload
-         $Params = @{
+    begin {
+        $BearerToken = $BearerToken -replace '^Bearer\s+', ''
+        $RequestParams = @{
             Method      = 'Put'
             Uri         = $ApiUrl
-            Body        = $Body
-            ContentType = $ContentType
-            Headers     = $Headers
-         }
-         try {
-            $Result = Invoke-RestMethod @Params
-            $Result.value
-         }
-         catch {}
+            ContentType = 'application/json'
+            Headers     = @{ Authorization = "Bearer $BearerToken" }
+        }
+    }
 
-         if ($Delay -gt 0) {
-            Start-Sleep -Milliseconds $Delay
-         }
-      }
-   }
-   End {
-   }
+    process {
+        if ($PSCmdlet.ShouldProcess("$DisplayName <$Email>", 'Invite and Add Guest')) {
+            $Body = @{
+                emailAddress = $Email
+                displayName  = $DisplayName
+                userType     = 'Guest'
+            } | ConvertTo-Json -Compress
+
+            try {
+                $ApiResponse = Invoke-RestMethod @RequestParams -Body $Body -ErrorAction Stop
+                [PSCustomObject]@{
+                    Email       = $Email
+                    DisplayName = $DisplayName
+                    Status      = 'Success'
+                    Response    = $ApiResponse
+                    Error       = $null
+                }
+            }
+            catch {
+                Write-Warning "Failed to add guest '$DisplayName <$Email>': $_"
+                [PSCustomObject]@{
+                    Email       = $Email
+                    DisplayName = $DisplayName
+                    Status      = 'Failed'
+                    Response    = $_.ErrorDetails.Message
+                    Error       = $_.Exception.Message
+                }
+            }
+        }
+    }
 }
