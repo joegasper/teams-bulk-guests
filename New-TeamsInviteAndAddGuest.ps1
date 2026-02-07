@@ -67,7 +67,7 @@ function New-TeamsInviteAndAddGuest {
     begin {
         $BearerToken = $BearerToken -replace '^Bearer\s+', ''
         $RequestParams = @{
-            Method      = 'Put'
+            Method      = 'PUT'
             Uri         = $ApiUrl
             ContentType = 'application/json'
             Headers     = @{ Authorization = "Bearer $BearerToken" }
