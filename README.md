@@ -4,7 +4,7 @@ This PowerShell function bulk adds guests to a team and sends standard Teams inv
 
 You will need to be familiar with your browser's developer tools (DevTools) to use this function.
 
-Using DevTools, you will extract two values from an initial adding of a guest to your team: **Request URL** (API URL) and **Authorization** (Bearer token).
+Using DevTools, you will extract two values from the initial addition of a guest to your team: **Request URL** (API URL) and **Authorization** (Bearer token).
 
 ## Collecting the Parameters
 
